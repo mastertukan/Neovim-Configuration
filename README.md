@@ -1,4 +1,7 @@
+Use the following Neovim build: NVIM v0.12.0-dev-1918+ge916f03277
+
 ## Using package managers install the follwing
+
 # Nodejs
 ```
 choco install nodejs nodejs.install -y
