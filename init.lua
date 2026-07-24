@@ -1,6 +1,6 @@
 vim.o.winborder = "rounded"
-vim.o.tabstop = 4
-vim.o.shiftwidth = 4
+vim.o.tabstop = 2
+vim.o.shiftwidth = 2
 vim.o.cursorcolumn = false
 vim.o.number = true
 vim.o.relativenumber = true
@@ -60,6 +60,7 @@ vim.pack.add({
 	{ src = "https://github.com/nvim-tree/nvim-web-devicons" },
 	{ src = "https://github.com/OmniSharp/omnisharp-vim" },
 	{ src = "https://github.com/stevearc/conform.nvim" },
+	{ src = "https://github.com/lewis6991/gitsigns.nvim" },
 	-- { src = "https://github.com/tpope/vim-surround" },
 })
 
@@ -73,7 +74,7 @@ require("nvim-treesitter.config").setup({
 	install_dir = vim.fn.stdpath("data") .. "/site",
 	-- autoinstall = true,
 	-- auto_install = true,
-	ensure_installed = { "lua", "c", "go", "python", "zig", "rust" },
+	ensure_installed = { "lua", "c", "go", "python", "zig", "rust", "javascript", "typescript", "html", "tsx" },
 	highlight = { enabled = true },
 })
 require("smear_cursor").setup({
@@ -106,22 +107,104 @@ require("conform").setup({
 		matlab = { "mh_style" },
 		zig = { "black" },
 		java = { "ast-grep" },
-		-- javascript = { "prettierd", "prettier", stop_after_first = true },
+		typescript = { "prettierd" },
+		css = { "prettierd" },
+		javascript = { "prettierd" }
 	},
+	notify_no_formatters = true,
 
-	format_on_save = {
-		-- These options will be passed to conform.format()
-		timeout_ms = 500,
+	-- format_on_save = {
+	-- 	-- These options will be passed to conform.format()
+	-- 	timeout_ms = 500,
+	-- 	lsp_format = "fallback",
+	-- },
+})
+
+require("gitsigns").setup({
+	signs = {
+		add = { text = "┃" },
+		change = { text = "┃" },
+		delete = { text = "_" },
+		topdelete = { text = "‾" },
+		changedelete = { text = "~" },
+		untracked = { text = "┆" },
+	},
+	signs_staged = {
+		add = { text = "┃" },
+		change = { text = "┃" },
+		delete = { text = "_" },
+		topdelete = { text = "‾" },
+		changedelete = { text = "~" },
+		untracked = { text = "┆" },
+	},
+	signs_staged_enable = true,
+	signcolumn = true, -- Toggle with `:Gitsigns toggle_signs`
+	numhl = false, -- Toggle with `:Gitsigns toggle_numhl`
+	linehl = false, -- Toggle with `:Gitsigns toggle_linehl`
+	word_diff = false, -- Toggle with `:Gitsigns toggle_word_diff`
+	watch_gitdir = {
+		follow_files = true,
+	},
+	auto_attach = true,
+	attach_to_untracked = false,
+	current_line_blame = false, -- Toggle with `:Gitsigns toggle_current_line_blame`
+	current_line_blame_opts = {
+		virt_text = true,
+		virt_text_pos = "eol", -- 'eol' | 'overlay' | 'right_align'
+		delay = 1000,
+		ignore_whitespace = false,
+		virt_text_priority = 100,
+		use_focus = true,
+	},
+	current_line_blame_formatter = "<author>, <author_time:%R> - <summary>",
+	blame_formatter = nil, -- Use default
+	sign_priority = 6,
+	update_debounce = 100,
+	status_formatter = nil, -- Use default
+	max_file_length = 40000, -- Disable if file is longer than this (in lines)
+	preview_config = {
+		-- Options passed to nvim_open_win
+		style = "minimal",
+		relative = "cursor",
+		row = 0,
+		col = 1,
+	},
+})
+
+-- vim.api.nvim_create_autocmd("BufWritePre", {
+-- 	pattern = "*",
+-- 	callback = function(args)
+-- 		require("conform").format({ bufnr = args.buf })
+-- 	end,
+-- })
+
+vim.keymap.set("n", "<leader>z", function()
+	require("conform").format({
+		async = true,
 		lsp_format = "fallback",
-	},
-})
+	})
+end, { desc = "Format current buffer" })
 
-vim.api.nvim_create_autocmd("BufWritePre", {
-	pattern = "*",
-	callback = function(args)
-		require("conform").format({ bufnr = args.buf })
-	end,
-})
+-- 1. Bind leader+0 in Visual Mode to trigger a range formatting command
+vim.keymap.set("v", "<leader>0", ":ConformFormatRange<CR>", { silent = true, desc = "Format selection" })
+
+-- 2. Create the internal command that processes visual ranges cleanly
+vim.api.nvim_create_user_command("ConformFormatRange", function(args)
+    local range = nil
+    if args.count ~= -1 then
+        local end_line = vim.api.nvim_buf_get_lines(0, args.line2 - 1, args.line2, true)[1]
+        range = {
+            start = { args.line1, 0 },
+            ["end"] = { args.line2, end_line and end_line:len() or 0 },
+        }
+    end
+
+    require("conform").format({
+        async = true,
+        lsp_format = "fallback",
+        range = range,
+    })
+end, { range = true })
 
 vim.api.nvim_create_autocmd("LspAttach", {
 	callback = function(args)
@@ -140,6 +223,8 @@ vim.lsp.enable({
 	"zls",
 	"matlab-language-server",
 	"snyk",
+	"ts_ls",
+	"cssls",
 })
 
 vim.lsp.config("lua_ls", {
@@ -152,6 +237,15 @@ vim.lsp.config("lua_ls", {
 	},
 })
 
+vim.lsp.config("cssls", {
+	filetypes = { 'css', 'scss', 'less' },
+	settings = {
+      css = { validate = true },
+      scss = { validate = true },
+      less = { validate = true },
+    },
+})
+
 vim.lsp.config("matlab-language-server", {
 	settings = {
 		Matlab = {
@@ -162,12 +256,19 @@ vim.lsp.config("matlab-language-server", {
 	},
 })
 
+vim.lsp.config("clangd", {
+	cmd = {
+		"clangd",
+		"--query-driver=C:/msys64/ucrt64/bin/g++.exe",
+	},
+})
+
 vim.lsp.config("rust-analyzer", {})
 
 vim.lsp.config("snyk", {})
 
 vim.keymap.set("n", "<Tab>", ":BufferNext<CR>")
-vim.keymap.set("n", "<S-Tab>", ":BufferNext<CR>")
+vim.keymap.set("n", "<S-Tab>", ":BufferPrevious<CR>")
 vim.keymap.set("n", "<Leader>x", ":BufferClose<CR>")
 
 require("telescope").setup({
@@ -247,7 +348,10 @@ require("lualine").setup({
 
 -- Telescope
 vim.keymap.set("n", "<Leader>lf", vim.lsp.buf.format)
-vim.keymap.set("n", "<Leader>f", ":Telescope<CR>")
+vim.keymap.set("n", "<Leader>t", ":Telescope<CR>")
+vim.keymap.set("n", "<Leader>f", ":Telescope find_files<CR>")
+vim.keymap.set("n", "<Leader>b", ":Telescope buffers<CR>")
+vim.keymap.set("n", "<Leader>g", ":Telescope grep_string<CR>")
 
 -- Colorscheme
 vim.cmd("colorscheme vague")
