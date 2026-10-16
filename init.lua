@@ -27,6 +27,10 @@ vim.keymap.set("n", "<leader>P", '"+P')
 vim.keymap.set("v", "<leader>p", '"+p')
 vim.keymap.set("v", "<leader>P", '"+P')
 
+-- Navigation
+vim.keymap.set("n", "<C-u>", "<C-u>zz")
+vim.keymap.set("n", "<C-d>", "<C-d>zz")
+
 -- Splitting the line
 vim.keymap.set("n", "<Leader>j", "f,a<CR><Esc>")
 
@@ -44,7 +48,7 @@ vim.g.netrw_bufsettings = "noma nomod nu rnu nobl nowrap ro"
 -- vim.keymap.set("i", "<leader>P", '"+P')
 
 vim.pack.add({
-	{ src = "https://github.com/vague-theme/vague.nvim" },
+	{ src = "https://github.com/vague-theme/vague.nvim" }, -- current default
 	{ src = "https://github.com/catppuccin/nvim" },
 	{ src = "https://github.com/mcauley-penney/techbase.nvim" },
 	{ src = "https://github.com/nvim-lua/plenary.nvim" },
@@ -65,6 +69,7 @@ vim.pack.add({
 })
 
 vim.cmd("packadd nvim-treesitter")
+vim.cmd("packadd nvim-lspconfig")
 
 require("mason").setup()
 require("barbar").setup()
@@ -74,7 +79,7 @@ require("nvim-treesitter.config").setup({
 	install_dir = vim.fn.stdpath("data") .. "/site",
 	-- autoinstall = true,
 	-- auto_install = true,
-	ensure_installed = { "lua", "c", "go", "python", "zig", "rust", "javascript", "typescript", "html", "tsx" },
+	ensure_installed = { "lua", "c", "go", "rust", "python", "zig", "rust", "javascript", "typescript", "html", "tsx" },
 	highlight = { enabled = true },
 })
 require("smear_cursor").setup({
@@ -109,7 +114,8 @@ require("conform").setup({
 		java = { "ast-grep" },
 		typescript = { "prettierd" },
 		css = { "prettierd" },
-		javascript = { "prettierd" }
+		javascript = { "prettierd" },
+		cmake = { "cmake_format" }
 	},
 	notify_no_formatters = true,
 
@@ -219,12 +225,12 @@ vim.lsp.enable({
 	"clangd",
 	"jdtls",
 	"pyright",
-	"rust-analyzer",
 	"zls",
 	"matlab-language-server",
 	"snyk",
 	"ts_ls",
 	"cssls",
+	"cmake",
 })
 
 vim.lsp.config("lua_ls", {
@@ -263,7 +269,62 @@ vim.lsp.config("clangd", {
 	},
 })
 
-vim.lsp.config("rust-analyzer", {})
+vim.lsp.config("rust-analyzer", {
+	cmd = { "rust-analyzer" },
+	filetypes = { "rust" },
+	root_markers = {
+		"Cargo.toml",
+		".git",
+	},
+	settings = {
+		["rust-analyzer"] = {
+			cargo = {
+				allFeatures = true,
+				loadOutDirsFromCheck = true,
+			},
+
+			procMacro = {
+				enable = true,
+			},
+
+			diagnostics = {
+				enable = true,
+			},
+
+			checkOnSave = true,
+
+			check = {
+				command = "check",
+			}
+		},
+	},
+})
+
+vim.lsp.config("omnisharp", {
+	cmd = {
+		"omnisharp",
+		"--languageserver",
+		"--hostPID",
+		tostring(vim.fn.getpid()),
+	},
+	root_markers = {
+		"*.sln",
+		"*.csproj",
+		".git",
+	},
+	filetypes = { "cs" },
+})
+
+vim.lsp.enable("omnisharp")
+
+vim.diagnostic.config({
+    virtual_text = true,
+    underline = true,
+    signs = true,
+    update_in_insert = true,
+})
+
+vim.lsp.enable("rust-analyzer")
 
 vim.lsp.config("snyk", {})
 
